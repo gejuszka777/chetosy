@@ -1,6 +1,6 @@
 --[[
-	CHEŁMSKI SIEKATOR V8
-	loadstring(game:HttpGet("https://raw.githubusercontent.com/gejuszka777/chetosy/main/chetosy.lua?v=8"))()
+	CHEŁMSKI SIEKATOR V7.1
+	loadstring(game:HttpGet("https://raw.githubusercontent.com/gejuszka777/chetosy/main/chetosy.lua?v=7.1"))()
 	Ugotowane przez Pstryczka
 ]]
 
@@ -36,7 +36,6 @@ local Stats      = svc("Stats")
 local RS         = svc("ReplicatedStorage")
 local VIM        = svc("VirtualInputManager")
 local TCS        = svc("TextChatService")
-local Clipboard  = setclipboard or toclipboard
 
 local LP = Players and Players.LocalPlayer
 local Camera = Workspace and Workspace.CurrentCamera
@@ -74,7 +73,9 @@ local function fatal(err)
 		f.BackgroundColor3 = Color3.fromRGB(30, 10, 12)
 		f.BorderSizePixel = 0
 		f.Parent = g
-		U_Corner(f, 10)
+		local c = Instance.new("UICorner")
+		c.CornerRadius = UDim.new(0, 10)
+		c.Parent = f
 
 		local t = Instance.new("TextLabel")
 		t.Size = UDim2.new(1, -24, 1, -24)
@@ -92,31 +93,18 @@ local function fatal(err)
 	if not ok then warn("[SIEKATOR] nie udało się narysować panelu błędu") end
 end
 
-local function U_Corner(i, r)
-	local c = Instance.new("UICorner")
-	c.CornerRadius = UDim.new(0, r or 6)
-	c.Parent = i
-	return c
-end
-
 --==========================================================
 -- 2. STAN
 --==========================================================
 local CS = {
-	Version = "8.0",
+	Version = "7.1",
 	Alive = true,
 	Destroyed = false,
 	Conns = {},
 	FPS = 60,
 	Ready = false,
-	Log = {},
 }
 CS.__index = CS
-
-function CS:Note(txt)
-	table.insert(self.Log, os.date("%H:%M:%S") .. "  " .. tostring(txt))
-	if #self.Log > 200 then table.remove(self.Log, 1) end
-end
 
 --==========================================================
 -- 3. UTIL
@@ -194,7 +182,6 @@ end
 
 function U.Hue(h) return Color3.fromHSV(h % 1, 0.7, 1) end
 function U.Clamp(n, a, b) if n < a then return a elseif n > b then return b end return n end
-function U.Dist(a, b) return (a - b).Magnitude end
 
 --==========================================================
 -- 4. SIGNAL
@@ -217,31 +204,25 @@ CS.Signal = { Changed = Signal.new(), Unload = Signal.new() }
 --==========================================================
 -- 5. STORAGE
 --==========================================================
-local FILE = "ChelmskiSiekatorV8.json"
+local FILE = "ChelmskiSiekatorV7.json"
 local Store = {}
 
-function Store.SaveTo(name, d)
-	local fn = name or FILE
+function Store.Save(d)
 	if not writefile then getgenv().CHELMSKI_CFG = d return end
 	local ok, e = pcall(function() return Http:JSONEncode(d) end)
-	if ok then pcall(writefile, fn, e) end
+	if ok then pcall(writefile, FILE, e) end
 end
 
-function Store.LoadFrom(name)
-	local fn = name or FILE
+function Store.Load()
 	if readfile then
-		local ok, raw = pcall(readfile, fn)
+		local ok, raw = pcall(readfile, FILE)
 		if ok and raw and raw ~= "" then
 			local ok2, d = pcall(function() return Http:JSONDecode(raw) end)
 			if ok2 and type(d) == "table" then return d end
 		end
 	end
-	if not name then return getgenv().CHELMSKI_CFG end
-	return nil
+	return getgenv().CHELMSKI_CFG
 end
-
-function Store.Save(d) Store.SaveTo(FILE, d) end
-function Store.Load() return Store.LoadFrom(nil) end
 
 --==========================================================
 -- 6. CONFIG
@@ -249,30 +230,28 @@ function Store.Load() return Store.LoadFrom(nil) end
 local DEF = {
 	SilentAim = false, SilentFOV = 150, SilentRange = 900, SilentPart = "Head",
 	SilentChance = 100, SilentVisible = false, SilentHold = false, SilentViz = true,
-	SilentPredict = 0, SilentPriority = "FOV", FovMode = "Ekran", LockRing = true,
+	SilentPredict = 0, SilentPriority = "FOV",
 	CircleOn = true, CircleStyle = "Cienkie", ColorCircle = { 61, 255, 158 },
 	TriggerBot = false, TriggerDelay = 0.05,
 	Aimbot = false, AimbotMode = "Hold", AimbotSmooth = 0.18, AimbotStyle = "Wykładniczy",
 	AimbotFOV = 120, AimbotRange = 900, AimbotPart = "Head", AimbotVisible = true,
 	AimbotHumanize = 0.15, AimbotSticky = true, AimbotPredict = 0,
-	ESP = false, ESPBox = true, ESPBoxStyle = "Pełny", ESPGradient = true, ESPSkeleton = true,
-	ESPName = true, ESPDistance = true, ESPHealth = true, ESPHealthText = false,
-	ESPHealthColor = true, ESPTracer = false, ESPHeadDot = false, ESPArrows = true,
-	ESPAlpha = 0.9, ESPMaxDist = 1500, ESPTeamCheck = true, ESPRainbow = false,
-	ESPChams = false, ESPTextScale = 1, ESPTargetRing = true,
+	ESP = false, ESPBox = true, ESPBoxStyle = "Pełny", ESPSkeleton = true, ESPName = true,
+	ESPDistance = true, ESPHealth = true, ESPHealthText = false, ESPTracer = false,
+	ESPHeadDot = false, ESPArrows = true, ESPAlpha = 0.9, ESPMaxDist = 1500,
+	ESPTeamCheck = true, ESPRainbow = false, ESPChams = false, ESPTextScale = 1,
 	ColorEnemy = { 61, 255, 158 }, ColorTeam = { 90, 170, 255 },
 	ColorSkel = { 255, 255, 255 }, ColorTracer = { 61, 255, 158 },
 	Wallhack = false, WHPlayers = true, WHBots = true, WHObjects = false,
 	WHFill = 0.55, WHOutline = 0.1, WHDepth = "Zawsze", ColorWH = { 61, 255, 158 },
 	Fullbright = false, NoFog = false, ClockTime = 14, Crosshair = false,
 	CrosshairStyle = "Krzyż", ColorCross = { 61, 255, 158 }, CamFOV = 70,
-	Hitbox = false, HitboxW = 4, HitboxH = 6, HitboxD = 4, HitboxHeadMul = 1,
-	HitboxPreview = true,
+	Hitbox = false, HitboxW = 4, HitboxH = 6, HitboxD = 4, HitboxPreview = true,
 	HitboxParts = { "Head", "UpperTorso", "LowerTorso", "HumanoidRootPart" },
 	BigHead = false, Disco = false,
-	PerfMode = false, AutoPerf = true, Friends = {}, ShowWM = true, ShowToast = true,
+	PerfMode = false, Friends = {}, ShowWM = true, ShowToast = true,
 	UIScale = 1, ColorAccent = { 61, 255, 158 },
-	UIKey = "RightShift", AimKey = "E", AimbotKey = "X", UnloadKey = "Delete",
+	UIKey = "RightShift", AimKey = "E", AimbotKey = "X", TriggerKey = "C", UnloadKey = "Delete",
 	ExportStr = "", WinX = 0, WinY = 0, WinW = 680, WinH = 470, WinSet = false,
 }
 
@@ -289,21 +268,12 @@ do
 end
 
 function Cfg.Get(k) return data[k] end
-function Cfg.Set(k, v)
-	data[k] = v
-	CS.Signal.Changed:Fire(k, v)
-end
+function Cfg.Set(k, v) data[k] = v CS.Signal.Changed:Fire(k, v) end
 function Cfg.Reset()
 	for k, v in pairs(DEF) do data[k] = type(v) == "table" and table.clone(v) or v end
 	CS.Signal.Changed:Fire("__all__", nil)
 end
 function Cfg.Save() Store.Save(data) end
-function Cfg.Apply(t)
-	for k, v in pairs(t) do
-		if DEF[k] ~= nil and type(v) == type(DEF[k]) then data[k] = v end
-	end
-	CS.Signal.Changed:Fire("__all__", nil)
-end
 CS.Cfg = Cfg
 
 --==========================================================
@@ -322,13 +292,17 @@ local function apply(o, k, v)
 	if not i then o.Props[k] = v return end
 	if k == "Visible" then i.Visible = v
 	elseif k == "Position" then
-		if typeof(v) == "Vector2" then i.Position = UDim2.fromOffset(v.X, v.Y) end
+		if type(v) == "table" or typeof(v) == "Vector2" then
+			i.Position = UDim2.fromOffset(v.X, v.Y)
+		end
 	elseif k == "Size" then
 		if type(v) == "number" then
 			if o.Kind == "Text" then i.TextSize = v else i.Size = UDim2.fromOffset(v, v) end
 		elseif v then
 			i.Size = UDim2.fromOffset(math.max(v.X, 0), math.max(v.Y, 0))
 		end
+	elseif k == "TextSize" then
+		if type(v) == "number" then i.TextSize = v end
 	elseif k == "Color" then
 		if o.Kind == "Text" then i.TextColor3 = v else i.BackgroundColor3 = v end
 		if o.Stroke then o.Stroke.Color = v end
@@ -408,7 +382,7 @@ local function frameObject(kind)
 		end
 	end
 	i.Visible = false
-	if Draw.Layer then i.Parent = Draw.Layer end
+	i.Parent = Draw.Layer
 	o.Inst = i
 	return setmetatable(o, MT)
 end
@@ -416,7 +390,7 @@ end
 function Draw.Init()
 	if Draw.Layer then return end
 	local g = Instance.new("ScreenGui")
-	g.Name = "ChelmskiSiekatorV8_Draw"
+	g.Name = "ChelmskiSiekatorV7_Draw"
 	g.ResetOnSpawn = false
 	g.IgnoreGuiInset = true
 	g.DisplayOrder = 9990
@@ -507,13 +481,6 @@ function T.Score(kind, fovDist, dist, hum)
 	return fovDist + dist * 0.04
 end
 
-function T.Angle(from, to)
-	local a = (to - from).Unit
-	local b = Camera.CFrame.LookVector
-	local d = U.Clamp(a:Dot(b), -1, 1)
-	return math.deg(math.acos(d))
-end
-
 function T.Best(o)
 	if not Players or not Camera or not LP then return nil end
 	local best, bs
@@ -521,8 +488,6 @@ function T.Best(o)
 	local vp = Camera.ViewportSize
 	local mid = Vector2.new(vp.X / 2, vp.Y / 2)
 	local myTeam = LP.Team
-	local mode3d = Cfg.Get("FovMode") == "3D"
-	local degLimit = o.fov / 4
 
 	for _, p in ipairs(Players:GetPlayers()) do
 		if p ~= LP then
@@ -533,19 +498,14 @@ function T.Best(o)
 					local dist = (part.Position - cp).Magnitude
 					if dist <= o.range then
 						local s, on = Camera:WorldToViewportPoint(part.Position)
-						local fd
-						if mode3d then
-							fd = T.Angle(cp, part.Position)
-							if fd > degLimit then fd = nil end
-						elseif on and s.Z > 0 then
-							local d2 = (Vector2.new(s.X, s.Y) - mid).Magnitude
-							fd = d2 <= o.fov and d2 or nil
-						end
-						if fd then
-							local sc = T.Score(o.priority, fd, dist, ch:FindFirstChildOfClass("Humanoid"))
-							if o.visible and not T.Visible(part) then sc += 400 end
-							if not bs or sc < bs then
-								best, bs = { Player = p, Part = part, Dist = dist }, sc
+						if on and s.Z > 0 then
+							local fd = (Vector2.new(s.X, s.Y) - mid).Magnitude
+							if fd <= o.fov then
+								local sc = T.Score(o.priority, fd, dist, ch:FindFirstChildOfClass("Humanoid"))
+								if o.visible and not T.Visible(part) then sc += 400 end
+								if not bs or sc < bs then
+									best, bs = { Player = p, Part = part, Dist = dist }, sc
+								end
 							end
 						end
 					end
@@ -609,24 +569,15 @@ function SA:Install()
 			mt.__index = SA:Handler(old)
 			setreadonly(mt, true)
 		end)
-		if ok then
-			self.Hooked = true
-			CS:Note("hook: getrawmetatable OK")
-			return true
-		end
+		if ok then self.Hooked = true return true end
 	end
 	if hookmetamethod then
 		local ok = pcall(function()
 			local old
 			old = hookmetamethod(game, "__index", SA:Handler(function(s, k) return old(s, k) end))
 		end)
-		if ok then
-			self.Hooked = true
-			CS:Note("hook: hookmetamethod OK")
-			return true
-		end
+		if ok then self.Hooked = true return true end
 	end
-	CS:Note("hook: BRAK — tryb kamerowy")
 	return false
 end
 
@@ -719,9 +670,10 @@ function TG:Fire()
 	if not VIM then return end
 	if os.clock() - self.Last < Cfg.Get("TriggerDelay") then return end
 	self.Last = os.clock()
-	pcall(function() VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0) end)
-	task.delay(0.02, function()
-		pcall(function() VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0) end)
+	pcall(function()
+		VIM:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+		task.wait(0.02)
+		VIM:SendMouseButtonEvent(0, 0, 0, false, game, 0)
 	end)
 end
 
@@ -741,7 +693,7 @@ end
 --==========================================================
 -- 12. ESP
 --==========================================================
-local ESP = { Pool = {}, Conn = nil, Acc = 0, Hz = 0 }
+local ESP = { Pool = {}, Conn = nil, Acc = 0 }
 
 local R15 = {
 	{ "Head", "UpperTorso" }, { "UpperTorso", "LowerTorso" }, { "LowerTorso", "HumanoidRootPart" },
@@ -812,14 +764,14 @@ function ESP:Draw(p)
 	local rs, ro = Camera:WorldToViewportPoint(root.Position)
 	if not ho or not ro or hs.Z <= 0 then self:Hide(e) return end
 
-	local tr = 1 - Cfg.Get("ESPAlpha")
-	local scale = Cfg.Get("ESPTextScale")
 	local col
 	if Cfg.Get("ESPRainbow") then col = U.Hue(os.clock() * 0.35 + (p.UserId % 100) / 100)
 	elseif T.Friend(p) then col = Color3.fromRGB(255, 210, 60)
 	elseif LP and p.Team == LP.Team then col = U.Col(Cfg.Get("ColorTeam"))
 	else col = U.Col(Cfg.Get("ColorEnemy")) end
 
+	local tr = 1 - Cfg.Get("ESPAlpha")
+	local scale = Cfg.Get("ESPTextScale")
 	local h = math.abs(rs.Y - hs.Y) * 2.2
 	local w = h * 0.55
 	local top = Vector2.new(hs.X, hs.Y - h * 0.25)
@@ -860,14 +812,8 @@ function ESP:Draw(p)
 		end
 	end
 
-	local nameCol = col
-	if Cfg.Get("ESPHealthColor") and hum then
-		local pct = U.Clamp(hum.Health / math.max(hum.MaxHealth, 1), 0, 1)
-		nameCol = Color3.fromRGB(math.floor(255 * (1 - pct)), math.floor(255 * pct), 80)
-	end
-
 	e.Name.Visible = Cfg.Get("ESPName")
-	e.Name.Color = nameCol
+	e.Name.Color = col
 	e.Name.Transparency = tr
 	e.Name.Size = math.floor(14 * scale)
 	e.Name.Text = T.Friend(p) and ("★ " .. p.DisplayName) or p.DisplayName
@@ -954,15 +900,11 @@ end
 
 function ESP:Step(dt)
 	if not Players then return end
-	local hz = 1 / 60
 	if Cfg.Get("PerfMode") then
-		hz = 1 / 40
-	elseif Cfg.Get("AutoPerf") and CS.FPS < 30 then
-		hz = 1 / 20
+		self.Acc += dt
+		if self.Acc < 1 / 40 then return end
+		self.Acc = 0
 	end
-	self.Acc += dt
-	if self.Acc < hz then return end
-	self.Acc = 0
 	for _, p in ipairs(Players:GetPlayers()) do
 		if p ~= LP then pcall(ESP.Draw, ESP, p) end
 	end
@@ -1034,7 +976,7 @@ function World:ClearHL()
 end
 
 function World:Step()
-	if not Players or not Workspace then return end
+	if not Players then return end
 	if not Cfg.Get("Wallhack") then
 		if next(self.Pool) then self:ClearHL() end
 		return
@@ -1113,15 +1055,13 @@ function HB:Apply(ch)
 	if not ch or self.Done[ch] then return end
 	self.Done[ch] = true
 	local w, h, d = Cfg.Get("HitboxW"), Cfg.Get("HitboxH"), Cfg.Get("HitboxD")
-	local mul = Cfg.Get("HitboxHeadMul")
 	local sel = Cfg.Get("HitboxParts")
 	for _, n in ipairs(PARTS) do
 		if table.find(sel, n) then
 			local p = ch:FindFirstChild(n)
 			if p and p:IsA("BasePart") then
-				self.Orig[p] = self.Orig[p] or { Size = p.Size, Collide = p.CanCollide }
-				local k = (n == "Head") and mul or 1
-				p.Size = Vector3.new(w * k, h * k, d * k)
+				self.Orig[p] = self.Orig[p] or p.Size
+				p.Size = Vector3.new(w, h, d)
 				p.CanCollide = false
 			end
 		end
@@ -1131,10 +1071,9 @@ end
 function HB:Restore(ch)
 	if not ch then return end
 	self.Done[ch] = nil
-	for p, o in pairs(self.Orig) do
+	for p, s in pairs(self.Orig) do
 		if p and p.Parent and p:IsDescendantOf(ch) then
-			p.Size = o.Size
-			p.CanCollide = o.Collide
+			p.Size = s
 			self.Orig[p] = nil
 		end
 	end
@@ -1194,13 +1133,12 @@ end
 --==========================================================
 -- 16. FUN
 --==========================================================
-local Fun = { Spin = false }
+local Fun = {}
 
 local LINES = {
 	"gg ez", "ale wpierdol", "aim diff", "to był lag", "oddajcie hp",
 	"siekator mode on", "l2p", "1v1?", "no i po co było", "siema cieniasy",
 	"kręci się w głowie", "nie da się ze mną grać", "ugotowane przez pstryczka",
-	"ser w kostkę", "pstryczek pozdrawia",
 }
 
 function Fun:Say(msg)
@@ -1208,7 +1146,7 @@ function Fun:Say(msg)
 		local ev = RS and RS:FindFirstChild("DefaultChatSystemChatEvents")
 		if ev then
 			local req = ev:FindFirstChild("SayMessageRequest")
-			if req then req:FireServer(msg, "All") end
+			if req then req:FireServer(msg, "All") return true end
 		end
 	end)
 	pcall(function()
@@ -1271,28 +1209,16 @@ function Fun:Disco(on)
 	end)
 end
 
-function Fun:SpinToggle()
-	self.Spin = not self.Spin
-	if not self.Spin then return end
-	task.spawn(function()
-		while self.Spin and CS.Alive and Camera do
-			Camera.CFrame = Camera.CFrame * CFrame.Angles(0, math.rad(1.6), 0)
-			task.wait(0.01)
-		end
-	end)
-end
-
 --==========================================================
 -- 17. OVERLAY
 --==========================================================
-local OV = { Circle = nil, Box = nil, Line = nil, Info = nil, Ring = nil, Dots = {}, Cross = {} }
+local OV = { Circle = nil, Box = nil, Line = nil, Info = nil, Dots = {}, Cross = {} }
 
 function OV:Init()
 	self.Circle = Draw.New("Circle", { Thickness = 1, Filled = false, NumSides = 96 })
 	self.Box = Draw.New("Square", { Thickness = 2, Filled = false })
 	self.Line = Draw.New("Line", { Thickness = 1 })
 	self.Info = Draw.New("Text", { Center = true, Outline = true, Size = 13 })
-	self.Ring = Draw.New("Circle", { Thickness = 1, Filled = false, NumSides = 40 })
 	for i = 1, 44 do self.Dots[i] = Draw.New("Square", { Filled = true, Thickness = 0, Size = Vector2.new(3, 3) }) end
 	for i = 1, 4 do self.Cross[i] = Draw.New("Line", { Thickness = 2 }) end
 end
@@ -1342,19 +1268,11 @@ function OV:Step()
 			self.Info.Color = acc
 			self.Info.Text = string.format("%s · %s", t.Player.Name, t.Part.Name)
 			self.Info.Position = Vector2.new(s.X, s.Y - 28)
-
-			self.Ring.Visible = Cfg.Get("LockRing")
-			self.Ring.Color = acc
-			self.Ring.Position = Vector2.new(s.X, s.Y)
-			self.Ring.Radius = 20 + math.sin(os.clock() * 6) * 3
-		else
-			self.Ring.Visible = false
 		end
 	else
 		self.Box.Visible = false
 		self.Line.Visible = false
 		self.Info.Visible = false
-		self.Ring.Visible = false
 	end
 
 	for _, l in ipairs(self.Cross) do l.Visible = false end
@@ -1414,31 +1332,13 @@ end
 --==========================================================
 -- 19. UI
 --==========================================================
-local UI = { Tabs = {}, Ref = {}, Toasts = {}, Search = {}, Min = false, Drag = nil }
+local UI = { Tabs = {}, Ref = {}, Toasts = {}, Min = false }
 
 function UI:Bind(k, fn) self.Ref[k] = fn end
 
-function UI:Hook()
-	local move = Input.InputChanged:Connect(function(i)
-		if not (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then return end
-		if UI.Drag and UI.Drag.Move then pcall(UI.Drag.Move, i) end
-	end)
-	local up = Input.InputEnded:Connect(function(i)
-		if not (i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch) then return end
-		if UI.Drag and UI.Drag.Stop then pcall(UI.Drag.Stop) end
-		UI.Drag = nil
-	end)
-	U.Track(move)
-	U.Track(up)
-end
-
-function UI:Hint(txt)
-	if self.FootHint then self.FootHint.Text = txt end
-end
-
 function UI:Root()
 	local g = Instance.new("ScreenGui")
-	g.Name = "ChelmskiSiekatorV8"
+	g.Name = "ChelmskiSiekatorV7"
 	g.ResetOnSpawn = false
 	g.IgnoreGuiInset = true
 	g.DisplayOrder = 10000
@@ -1448,8 +1348,11 @@ function UI:Root()
 	if not ok or not g.Parent then g.Parent = LP:WaitForChild("PlayerGui") end
 
 	local holder = U.Try("CanvasGroup", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, g)
-	if holder then UI.IsCanvas = true
-	else holder = U.New("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, g) end
+	if holder then
+		UI.IsCanvas = true
+	else
+		holder = U.New("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1 }, g)
+	end
 
 	local w0 = U.Clamp(tonumber(Cfg.Get("WinW")) or 680, 520, 1600)
 	local h0 = U.Clamp(tonumber(Cfg.Get("WinH")) or 470, 340, 1200)
@@ -1465,8 +1368,8 @@ function UI:Root()
 	local mainStroke = U.Stroke(main, TH.Line, 1, 0.3)
 	main.ClipsDescendants = true
 
-	local sc = U.Try("UIScale", {}, main)
-	if sc then sc.Scale = U.Clamp(tonumber(Cfg.Get("UIScale")) or 1, 0.8, 1.25) end
+	local scale = U.Try("UIScale", {}, main)
+	if scale then scale.Scale = U.Clamp(tonumber(Cfg.Get("UIScale")) or 1, 0.8, 1.25) end
 
 	for i = 1, 3 do
 		local b = U.New("Frame", {
@@ -1480,13 +1383,15 @@ function UI:Root()
 	end
 
 	local accent = U.New("Frame", {
-		Size = UDim2.new(1, 0, 0, 2), BackgroundColor3 = TH.Acc, BorderSizePixel = 0, ZIndex = 4,
+		Size = UDim2.new(1, 0, 0, 2), BackgroundColor3 = TH.Acc,
+		BorderSizePixel = 0, ZIndex = 4,
 	}, main)
 	U.Grad(accent, TH.Acc, Color3.fromRGB(120, 255, 200), 0)
 	table.insert(Accents, accent)
 
 	local bar = U.New("Frame", {
-		Size = UDim2.new(1, 0, 0, 64), BackgroundColor3 = TH.Panel, BorderSizePixel = 0, ZIndex = 3,
+		Size = UDim2.new(1, 0, 0, 64), BackgroundColor3 = TH.Panel,
+		BorderSizePixel = 0, ZIndex = 3,
 	}, main)
 	U.Grad(bar, Color3.fromRGB(24, 31, 39), TH.Bg, 90)
 
@@ -1541,31 +1446,13 @@ function UI:Root()
 	}, main)
 	U.Grad(side, Color3.fromRGB(18, 23, 30), TH.Bg, 90)
 	local pad = Instance.new("UIPadding")
-	pad.PaddingTop = UDim.new(0, 10)
+	pad.PaddingTop = UDim.new(0, 12)
 	pad.PaddingLeft = UDim.new(0, 11)
 	pad.PaddingRight = UDim.new(0, 11)
 	pad.Parent = side
-
-	local search = U.New("TextBox", {
-		Size = UDim2.new(1, 0, 0, 26), BackgroundColor3 = TH.Card, Text = "",
-		PlaceholderText = "szukaj…", PlaceholderColor3 = TH.Dim,
-		Font = Enum.Font.Gotham, TextSize = 11, TextColor3 = TH.Text,
-		TextXAlignment = Enum.TextXAlignment.Left, ClearTextOnFocus = false, BorderSizePixel = 0,
-		ZIndex = 3,
-	}, side)
-	U.Corner(search, 7)
-	local sp = Instance.new("UIPadding")
-	sp.PaddingLeft = UDim.new(0, 9)
-	sp.Parent = search
-	UI.FootHint = nil
-
-	local listWrap = U.New("Frame", {
-		Size = UDim2.new(1, 0, 1, -34), Position = UDim2.fromOffset(0, 34),
-		BackgroundTransparency = 1, ZIndex = 2,
-	}, side)
 	local lay = Instance.new("UIListLayout")
 	lay.Padding = UDim.new(0, 5)
-	lay.Parent = listWrap
+	lay.Parent = side
 
 	local content = U.New("Frame", {
 		Size = UDim2.new(1, -176, 1, -90), Position = UDim2.fromOffset(176, 64),
@@ -1583,12 +1470,11 @@ function UI:Root()
 	}, foot)
 	U.Corner(fdot, 3)
 	table.insert(Accents, fdot)
-
-	UI.FootHint = U.New("TextLabel", {
-		Size = UDim2.fromOffset(430, 26), Position = UDim2.fromOffset(30, 0),
+	U.New("TextLabel", {
+		Size = UDim2.fromOffset(400, 26), Position = UDim2.fromOffset(30, 0),
 		BackgroundTransparency = 1, Text = "Ugotowane przez Pstryczka  ·  v" .. CS.Version,
 		Font = Enum.Font.Gotham, TextSize = 10, TextColor3 = TH.Dim,
-		TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 4,
+		TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 4,
 	}, foot)
 	U.New("TextLabel", {
 		Size = UDim2.fromOffset(140, 26), Position = UDim2.new(1, -152, 0, 0),
@@ -1606,23 +1492,14 @@ function UI:Root()
 		BackgroundColor3 = TH.Dim, BorderSizePixel = 0, Rotation = 45,
 	}, handle)
 
+	local drag, startP, baseP = false, nil, nil
+	local resizing, baseSize = false, nil
+
 	local function beginDrag(i)
-		local base = main.AbsolutePosition
-		local st = i.Position
+		drag = true
+		startP = i.Position
+		baseP = main.AbsolutePosition
 		U.Tween(mainStroke, 0.15, { Transparency = 0, Color = TH.Acc })
-		UI.Drag = {
-			Move = function(mv)
-				local vp = Camera and Camera.ViewportSize or Vector2.new(1920, 1080)
-				local d = mv.Position - st
-				local x = U.Clamp(base.X + d.X, 0, math.max(vp.X - main.AbsoluteSize.X, 0))
-				local y = U.Clamp(base.Y + d.Y, 0, math.max(vp.Y - main.AbsoluteSize.Y, 0))
-				main.Position = UDim2.fromOffset(x, y)
-				Cfg.Set("WinX", math.floor(x))
-				Cfg.Set("WinY", math.floor(y))
-				Cfg.Set("WinSet", true)
-			end,
-			Stop = function() U.Tween(mainStroke, 0.25, { Transparency = 0.3, Color = TH.Line }) end,
-		}
 	end
 
 	for _, h in ipairs({ bar, logo, title, sub }) do
@@ -1644,45 +1521,43 @@ function UI:Root()
 	end)
 
 	handle.InputBegan:Connect(function(i)
-		if not (i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch) then return end
-		local st = i.Position
-		local base = Vector2.new(main.AbsoluteSize.X, main.AbsoluteSize.Y)
-		UI.Drag = {
-			Move = function(mv)
-				local vp = Camera and Camera.ViewportSize or Vector2.new(1920, 1080)
-				local d = mv.Position - st
-				local w = U.Clamp(base.X + d.X, 520, math.max(vp.X - 40, 520))
-				local hh = U.Clamp(base.Y + d.Y, 340, math.max(vp.Y - 40, 340))
-				main.Size = UDim2.fromOffset(w, hh)
-				Cfg.Set("WinW", math.floor(w))
-				Cfg.Set("WinH", math.floor(hh))
-			end,
-			Stop = function() end,
-		}
-	end)
-
-	search:GetPropertyChangedSignal("Text"):Connect(function()
-		UI:Filter(search.Text)
-	end)
-
-	return g, holder, main, listWrap, content
-end
-
-function UI:Filter(q)
-	q = q:lower()
-	for _, item in ipairs(self.Search) do
-		if item.Row and item.Row.Parent then
-			if q == "" then
-				item.Row.Visible = true
-			else
-				item.Row.Visible = item.Label:lower():find(q, 1, true) ~= nil
-			end
+		if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+			resizing = true
+			startP = i.Position
+			baseSize = Vector2.new(main.AbsoluteSize.X, main.AbsoluteSize.Y)
 		end
-	end
-end
+	end)
 
-function UI:Reg(row, label)
-	table.insert(self.Search, { Row = row, Label = label })
+	Input.InputChanged:Connect(function(i)
+		if not (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then return end
+		local vp = Camera and Camera.ViewportSize or Vector2.new(1920, 1080)
+		if drag then
+			local d = i.Position - startP
+			local x = U.Clamp(baseP.X + d.X, 0, math.max(vp.X - main.AbsoluteSize.X, 0))
+			local y = U.Clamp(baseP.Y + d.Y, 0, math.max(vp.Y - main.AbsoluteSize.Y, 0))
+			main.Position = UDim2.fromOffset(x, y)
+			Cfg.Set("WinX", math.floor(x))
+			Cfg.Set("WinY", math.floor(y))
+			Cfg.Set("WinSet", true)
+		elseif resizing then
+			local d = i.Position - startP
+			local w = U.Clamp(baseSize.X + d.X, 520, math.max(vp.X - 40, 520))
+			local hh = U.Clamp(baseSize.Y + d.Y, 340, math.max(vp.Y - 40, 340))
+			main.Size = UDim2.fromOffset(w, hh)
+			Cfg.Set("WinW", math.floor(w))
+			Cfg.Set("WinH", math.floor(hh))
+		end
+	end)
+
+	Input.InputEnded:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+			if drag or resizing then U.Tween(mainStroke, 0.25, { Transparency = 0.3, Color = TH.Line }) end
+			drag = false
+			resizing = false
+		end
+	end)
+
+	return g, holder, main, side, content
 end
 
 function UI:Init()
@@ -1702,7 +1577,6 @@ function UI:Init()
 	end
 
 	pcall(applyAccent)
-	self.IsOpen = true
 end
 
 function UI:Ripple(btn)
@@ -1804,11 +1678,11 @@ end
 
 function UI:Section(page, text)
 	local f = U.New("Frame", { Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1 }, page)
-	local b = U.New("Frame", {
+	local bar = U.New("Frame", {
 		Size = UDim2.fromOffset(3, 11), Position = UDim2.fromOffset(0, 3),
 		BackgroundColor3 = TH.Acc, BorderSizePixel = 0,
 	}, f)
-	table.insert(Accents, b)
+	table.insert(Accents, bar)
 	U.New("TextLabel", {
 		Size = UDim2.new(1, -12, 1, 0), Position = UDim2.fromOffset(11, 0),
 		BackgroundTransparency = 1, Text = text:upper(), Font = Enum.Font.GothamBold,
@@ -1816,27 +1690,20 @@ function UI:Section(page, text)
 	}, f)
 end
 
-function UI:Card(page, h, hint, label)
+function UI:Card(page, h)
 	local f = U.New("Frame", {
 		Size = UDim2.new(1, 0, 0, h or 36), BackgroundColor3 = TH.Card, BorderSizePixel = 0,
 	}, page)
 	U.Corner(f, 10)
 	local s = U.Stroke(f, TH.Line, 1, 0.55)
 	U.Grad(f, Color3.fromRGB(27, 33, 41), TH.Card, 90)
-	f.MouseEnter:Connect(function()
-		U.Tween(s, 0.15, { Transparency = 0.2, Color = TH.AccD })
-		if hint then UI:Hint(hint) end
-	end)
-	f.MouseLeave:Connect(function()
-		U.Tween(s, 0.15, { Transparency = 0.55, Color = TH.Line })
-		if hint then UI:Hint("Ugotowane przez Pstryczka  ·  v" .. CS.Version) end
-	end)
-	if label then self:Reg(f, label) end
+	f.MouseEnter:Connect(function() U.Tween(s, 0.15, { Transparency = 0.2, Color = TH.AccD }) end)
+	f.MouseLeave:Connect(function() U.Tween(s, 0.15, { Transparency = 0.55, Color = TH.Line }) end)
 	return f
 end
 
-function UI:Toggle(page, label, key, cb, hint)
-	local row = self:Card(page, 36, hint, label)
+function UI:Toggle(page, label, key, cb)
+	local row = self:Card(page, 36)
 	U.New("TextLabel", {
 		Size = UDim2.new(1, -62, 1, 0), Position = UDim2.fromOffset(13, 0),
 		BackgroundTransparency = 1, Text = label, Font = Enum.Font.GothamMedium,
@@ -1878,11 +1745,10 @@ function UI:Toggle(page, label, key, cb, hint)
 		paint(v, true)
 		if cb then task.spawn(cb, v) end
 	end)
-	return row
 end
 
-function UI:Slider(page, label, key, min, max, step, suffix, cb, hint)
-	local row = self:Card(page, 50, hint, label)
+function UI:Slider(page, label, key, min, max, step, suffix, cb)
+	local row = self:Card(page, 50)
 	U.New("TextLabel", {
 		Size = UDim2.new(1, -92, 0, 20), Position = UDim2.fromOffset(13, 6),
 		BackgroundTransparency = 1, Text = label, Font = Enum.Font.GothamMedium,
@@ -1910,6 +1776,8 @@ function UI:Slider(page, label, key, min, max, step, suffix, cb, hint)
 	}, track)
 	U.Corner(knob, 6)
 
+	local dragging = false
+
 	local function set(v, fire, silent)
 		v = U.Clamp(U.Round(v, step), min, max)
 		local a = (v - min) / (max - min)
@@ -1930,29 +1798,31 @@ function UI:Slider(page, label, key, min, max, step, suffix, cb, hint)
 
 	track.InputBegan:Connect(function(i)
 		if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
 			U.Tween(knob, 0.12, { Size = UDim2.fromOffset(16, 16) }, Enum.EasingStyle.Back)
 			from(i)
-			UI.Drag = {
-				Move = from,
-				Stop = function() U.Tween(knob, 0.12, { Size = UDim2.fromOffset(12, 12) }) end,
-			}
 		end
 	end)
-	return row
+	Input.InputChanged:Connect(function(i)
+		if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+			from(i)
+		end
+	end)
+	Input.InputEnded:Connect(function(i)
+		if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+			dragging = false
+			U.Tween(knob, 0.12, { Size = UDim2.fromOffset(12, 12) })
+		end
+	end)
 end
 
-function UI:Dropdown(page, label, key, opts, cb, hint)
+function UI:Dropdown(page, label, key, opts, cb)
 	local row = U.New("Frame", {
 		Size = UDim2.new(1, 0, 0, 36), BackgroundColor3 = TH.Card,
 		BorderSizePixel = 0, ClipsDescendants = true,
 	}, page)
 	U.Corner(row, 10)
 	U.Stroke(row, TH.Line, 1, 0.55)
-	self:Reg(row, label)
-	if hint then
-		row.MouseEnter:Connect(function() UI:Hint(hint) end)
-		row.MouseLeave:Connect(function() UI:Hint("Ugotowane przez Pstryczka  ·  v" .. CS.Version) end)
-	end
 
 	local head = U.New("TextButton", {
 		Size = UDim2.new(1, 0, 0, 36), BackgroundTransparency = 1, Text = "", AutoButtonColor = false,
@@ -2003,7 +1873,6 @@ function UI:Dropdown(page, label, key, opts, cb, hint)
 	end)
 
 	self:Bind(key, function() cur.Text = tostring(Cfg.Get(key)) .. "  ▾" end)
-	return row
 end
 
 local SWATCH = {
@@ -2011,17 +1880,17 @@ local SWATCH = {
 	{ 200, 120, 255 }, { 255, 255, 255 }, { 255, 120, 200 }, { 120, 255, 255 },
 }
 
-function UI:Color(page, label, key, hint)
-	local row = self:Card(page, 32, hint, label)
+function UI:Color(page, label, key)
+	local row = self:Card(page, 32)
 	row.ClipsDescendants = true
 	U.New("TextLabel", {
-		Size = UDim2.fromOffset(112, 32), Position = UDim2.fromOffset(13, 0),
+		Size = UDim2.fromOffset(120, 32), Position = UDim2.fromOffset(13, 0),
 		BackgroundTransparency = 1, Text = label, Font = Enum.Font.GothamMedium,
 		TextSize = 12, TextColor3 = TH.Text, TextXAlignment = Enum.TextXAlignment.Left,
 	}, row)
 
 	local prev = U.New("TextButton", {
-		Size = UDim2.fromOffset(18, 18), Position = UDim2.new(1, -30, 0, 7),
+		Size = UDim2.fromOffset(18, 18), Position = UDim2.new(1, -32, 0, 7),
 		BackgroundColor3 = U.Col(Cfg.Get(key)), Text = "", AutoButtonColor = false, BorderSizePixel = 0,
 	}, row)
 	U.Corner(prev, 9)
@@ -2029,11 +1898,11 @@ function UI:Color(page, label, key, hint)
 
 	for i, rgb in ipairs(SWATCH) do
 		local s = U.New("TextButton", {
-			Size = UDim2.fromOffset(16, 16), Position = UDim2.fromOffset(126 + (i - 1) * 20, 8),
+			Size = UDim2.fromOffset(17, 17), Position = UDim2.fromOffset(132 + (i - 1) * 21, 7),
 			BackgroundColor3 = Color3.fromRGB(rgb[1], rgb[2], rgb[3]),
 			Text = "", AutoButtonColor = false, BorderSizePixel = 0,
 		}, row)
-		U.Corner(s, 8)
+		U.Corner(s, 9)
 		s.MouseButton1Click:Connect(function()
 			Cfg.Set(key, table.clone(rgb))
 			prev.BackgroundColor3 = U.Col(rgb)
@@ -2058,11 +1927,11 @@ function UI:Color(page, label, key, hint)
 		prev.BackgroundColor3 = Color3.fromRGB(cur[1], cur[2], cur[3])
 	end
 
-	for idx, nm in ipairs({ "R", "G", "B" }) do
+	for idx, name in ipairs({ "R", "G", "B" }) do
 		local r = U.New("Frame", { Size = UDim2.new(1, 0, 0, 24), BackgroundColor3 = TH.Hover, BorderSizePixel = 0 }, panel)
 		U.Corner(r, 6)
 		U.New("TextLabel", {
-			Size = UDim2.fromOffset(18, 24), BackgroundTransparency = 1, Text = nm,
+			Size = UDim2.fromOffset(18, 24), BackgroundTransparency = 1, Text = name,
 			Font = Enum.Font.GothamBold, TextSize = 10, TextColor3 = TH.Dim,
 		}, r)
 		local tr = U.New("Frame", {
@@ -2072,6 +1941,7 @@ function UI:Color(page, label, key, hint)
 		U.Corner(tr, 2)
 		local fl = U.New("Frame", { Size = UDim2.fromScale(cur[idx] / 255, 1), BackgroundColor3 = TH.Acc, BorderSizePixel = 0 }, tr)
 		U.Corner(fl, 2)
+		local dragging = false
 		local function upd(i)
 			local a = U.Clamp((i.Position.X - tr.AbsolutePosition.X) / math.max(tr.AbsoluteSize.X, 1), 0, 1)
 			cur[idx] = math.floor(a * 255)
@@ -2080,9 +1950,15 @@ function UI:Color(page, label, key, hint)
 		end
 		tr.InputBegan:Connect(function(i)
 			if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+				dragging = true
 				upd(i)
-				UI.Drag = { Move = upd, Stop = function() end }
 			end
+		end)
+		Input.InputChanged:Connect(function(i)
+			if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then upd(i) end
+		end)
+		Input.InputEnded:Connect(function(i)
+			if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then dragging = false end
 		end)
 	end
 
@@ -2098,11 +1974,10 @@ function UI:Color(page, label, key, hint)
 		cur = table.clone(c)
 		prev.BackgroundColor3 = U.Col(c)
 	end)
-	return row
 end
 
-function UI:Keybind(page, label, key, hint)
-	local row = self:Card(page, 36, hint, label)
+function UI:Keybind(page, label, key)
+	local row = self:Card(page, 36)
 	U.New("TextLabel", {
 		Size = UDim2.new(1, -92, 1, 0), Position = UDim2.fromOffset(13, 0),
 		BackgroundTransparency = 1, Text = label, Font = Enum.Font.GothamMedium,
@@ -2124,10 +1999,9 @@ function UI:Keybind(page, label, key, hint)
 		b.TextColor3 = TH.Acc
 	end))
 	self:Bind(key, function() b.Text = Cfg.Get(key) end)
-	return row
 end
 
-function UI:Button(page, label, cb, danger, hint)
+function UI:Button(page, label, cb, danger)
 	local b = U.New("TextButton", {
 		Size = UDim2.new(1, 0, 0, 34), BackgroundColor3 = danger and Color3.fromRGB(64, 26, 30) or TH.Card,
 		Text = label, Font = Enum.Font.GothamBold, TextSize = 13,
@@ -2136,11 +2010,6 @@ function UI:Button(page, label, cb, danger, hint)
 	}, page)
 	U.Corner(b, 10)
 	U.Stroke(b, TH.Line, 1, 0.6)
-	self:Reg(b, label)
-	if hint then
-		b.MouseEnter:Connect(function() UI:Hint(hint) end)
-		b.MouseLeave:Connect(function() UI:Hint("Ugotowane przez Pstryczka  ·  v" .. CS.Version) end)
-	end
 	b.MouseEnter:Connect(function() U.Tween(b, 0.12, { BackgroundColor3 = TH.Hover }) end)
 	b.MouseLeave:Connect(function() U.Tween(b, 0.12, { BackgroundColor3 = danger and Color3.fromRGB(64, 26, 30) or TH.Card }) end)
 	b.MouseButton1Click:Connect(function() task.spawn(cb) end)
@@ -2165,25 +2034,26 @@ function UI:Minimize()
 end
 
 function UI:Close()
-	if not self.IsOpen then return end
-	self.IsOpen = false
 	if self.IsCanvas then U.Tween(self.Holder, 0.2, { GroupTransparency = 1 }) end
+	local w, h = self.Main.Size.X.Offset, self.Main.Size.Y.Offset
+	U.Tween(self.Main, 0.2, { Size = UDim2.fromOffset(math.max(w - 40, 300), math.max(h - 30, 200)) }, Enum.EasingStyle.Quart)
 	task.delay(0.21, function() if self.Gui then self.Gui.Enabled = false end end)
 end
 
 function UI:Open()
-	if self.IsOpen or not self.Gui then return end
-	self.IsOpen = true
+	if not self.Gui then return end
 	self.Gui.Enabled = true
-	if self.IsCanvas then
-		self.Holder.GroupTransparency = 1
-		U.Tween(self.Holder, 0.2, { GroupTransparency = 0 })
-	end
+	local w = self.Main.Size.X.Offset
+	local h = self.Main.Size.Y.Offset
+	self.Main.Size = UDim2.fromOffset(math.max(w - 40, 300), math.max(h - 30, 200))
+	if self.IsCanvas then self.Holder.GroupTransparency = 1 end
+	U.Tween(self.Main, 0.34, { Size = UDim2.fromOffset(w, h) }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+	if self.IsCanvas then U.Tween(self.Holder, 0.2, { GroupTransparency = 0 }) end
 end
 
 function UI:ToggleOpen()
 	if not self.Gui then return end
-	if self.IsOpen then self:Close() else self:Open() end
+	if self.Gui.Enabled then self:Close() else self:Open() end
 end
 
 function UI:Toast(title, body, danger)
@@ -2225,7 +2095,7 @@ local WM = {}
 
 function WM:Init()
 	self.F = U.New("Frame", {
-		Size = UDim2.fromOffset(232, 26), Position = UDim2.fromOffset(12, -40),
+		Size = UDim2.fromOffset(230, 26), Position = UDim2.fromOffset(12, -40),
 		BackgroundColor3 = TH.Bg, BackgroundTransparency = 0.15, BorderSizePixel = 0,
 	}, UI.Gui)
 	U.Corner(self.F, 8)
@@ -2263,48 +2133,7 @@ function WM:Step()
 end
 
 --==========================================================
--- 21. DIAGNOSTYKA
---==========================================================
-local Diag = {}
-
-local CHECKS = {
-	{ "Drawing API", function() return Draw.Has end },
-	{ "getrawmetatable", function() return type(getrawmetatable) == "function" end },
-	{ "hookmetamethod", function() return type(hookmetamethod) == "function" end },
-	{ "gethui", function() return type(gethui) == "function" end },
-	{ "writefile", function() return type(writefile) == "function" end },
-	{ "VirtualInputManager", function() return VIM ~= nil end },
-	{ "TextChatService", function() return TCS ~= nil end },
-	{ "Kamera", function() return Camera ~= nil end },
-	{ "PlayerGui", function() return LP and LP:FindFirstChildOfClass("PlayerGui") ~= nil end },
-	{ "Hook zamontowany", function() return SA.Hooked end },
-	{ "GUI rodzic", function() return UI.Gui and UI.Gui.Parent ~= nil end },
-	{ "FPS >= 30", function() return CS.FPS >= 30 end },
-}
-
-function Diag:Run()
-	if not self.Holder then return end
-	for _, ch in ipairs(self.Holder:GetChildren()) do
-		if ch:IsA("TextButton") then ch:Destroy() end
-	end
-	for _, c in ipairs(CHECKS) do
-		local ok = false
-		pcall(function() ok = c[2]() == true end)
-		local b = U.New("TextButton", {
-			Size = UDim2.new(1, 0, 0, 26),
-			BackgroundColor3 = ok and Color3.fromRGB(18, 46, 32) or Color3.fromRGB(52, 20, 24),
-			Text = "  " .. (ok and "✔  " or "✖  ") .. c[1],
-			Font = Enum.Font.Gotham, TextSize = 11,
-			TextColor3 = ok and TH.Acc or TH.Red,
-			TextXAlignment = Enum.TextXAlignment.Left,
-			AutoButtonColor = false, BorderSizePixel = 0,
-		}, self.Holder)
-		U.Corner(b, 6)
-	end
-end
-
---==========================================================
--- 22. BUILD
+-- 21. BUILD
 --==========================================================
 local function tab(name, glyph, fn)
 	local t
@@ -2316,67 +2145,63 @@ end
 
 local function build()
 	UI:Init()
-	UI:Hook()
 	WM:Init()
 
 	tab("Aim", "⌖", function(p)
 		UI:Section(p, "Silent Aim")
 		UI:Toggle(p, "Silent Aim", "SilentAim", function(on)
 			if on and not SA:Install() then UI:Toast("Silent Aim", "Brak hooków — tryb kamerowy", true) end
-		end, "Przechwytuje wektor strzału — kamera zostaje na miejscu")
-		UI:Slider(p, "Szansa trafienia", "SilentChance", 0, 100, 1, "%", nil, "Odsetek strzałów, które trafią w cel")
-		UI:Slider(p, "FOV", "SilentFOV", 20, 500, 5, " px", nil, "Stożek, w którym szukany jest cel")
-		UI:Slider(p, "Zasięg", "SilentRange", 50, 3000, 25, " st", nil, "Maksymalna odległość celu")
-		UI:Slider(p, "Predykcja", "SilentPredict", 0, 0.6, 0.01, " s", nil, "Wyprzedzenie ruchu celu")
-		UI:Dropdown(p, "Część ciała", "SilentPart", { "Head", "UpperTorso", "HumanoidRootPart", "Blisko" }, nil, "Punkt, w który leci strzał")
-		UI:Dropdown(p, "Priorytet", "SilentPriority", { "FOV", "Dystans", "Zdrowie" }, nil, "Jak wybierany jest cel")
-		UI:Dropdown(p, "Tryb FOV", "FovMode", { "Ekran", "3D" }, nil, "Ekran = piksele, 3D = kąt w stopniach")
-		UI:Toggle(p, "Tylko widoczni", "SilentVisible", nil, "Pomija cele za ścianami")
-		UI:Toggle(p, "Tylko na trzymanie", "SilentHold", nil, "Cel aktywny wyłącznie przy trzymaniu klawisza")
-		UI:Toggle(p, "Koło FOV", "CircleOn", nil, "Rysuje stożek na ekranie")
-		UI:Dropdown(p, "Styl koła", "CircleStyle", { "Cienkie", "Grube", "Kropkowane" }, nil, "Wygląd znacznika FOV")
-		UI:Color(p, "Kolor koła", "ColorCircle", "Kolor znacznika FOV")
-		UI:Toggle(p, "Wizualizacja celu", "SilentViz", nil, "Ramka i linia do wybranego celu")
-		UI:Toggle(p, "Pierścień blokady", "LockRing", nil, "Pulsujący okrąg na celu")
+		end)
+		UI:Slider(p, "Szansa trafienia", "SilentChance", 0, 100, 1, "%")
+		UI:Slider(p, "FOV", "SilentFOV", 20, 500, 5, " px")
+		UI:Slider(p, "Zasięg", "SilentRange", 50, 3000, 25, " st")
+		UI:Slider(p, "Predykcja", "SilentPredict", 0, 0.6, 0.01, " s")
+		UI:Dropdown(p, "Część ciała", "SilentPart", { "Head", "UpperTorso", "HumanoidRootPart", "Blisko" })
+		UI:Dropdown(p, "Priorytet", "SilentPriority", { "FOV", "Dystans", "Zdrowie" })
+		UI:Toggle(p, "Tylko widoczni", "SilentVisible")
+		UI:Toggle(p, "Tylko na trzymanie", "SilentHold")
+		UI:Toggle(p, "Koło FOV", "CircleOn")
+		UI:Dropdown(p, "Styl koła", "CircleStyle", { "Cienkie", "Grube", "Kropkowane" })
+		UI:Color(p, "Kolor koła", "ColorCircle")
+		UI:Toggle(p, "Wizualizacja celu", "SilentViz")
 
 		UI:Section(p, "Aimbot")
-		UI:Toggle(p, "Aimbot", "Aimbot", function(on) if on then AB:Start() else AB:Stop() end end, "Prowadzi kamerę za celem")
-		UI:Dropdown(p, "Tryb", "AimbotMode", { "Hold", "Zawsze" }, nil, "Hold = tylko z klawiszem")
-		UI:Dropdown(p, "Styl", "AimbotStyle", { "Wykładniczy", "Liniowy", "Snap" }, nil, "Krzywa dochodzenia do celu")
-		UI:Slider(p, "Płynność", "AimbotSmooth", 0.01, 1, 0.01, "", nil, "Niżej = szybciej")
-		UI:Slider(p, "Humanizacja", "AimbotHumanize", 0, 2, 0.05, "", nil, "Delikatne drżenie jak u człowieka")
-		UI:Slider(p, "Predykcja", "AimbotPredict", 0, 0.6, 0.01, " s", nil, "Wyprzedzenie ruchu celu")
-		UI:Slider(p, "FOV", "AimbotFOV", 10, 400, 5, " px", nil, "Stożek aimbota")
-		UI:Slider(p, "Zasięg", "AimbotRange", 50, 3000, 25, " st", nil, "Maksymalna odległość celu")
-		UI:Dropdown(p, "Punkt celowania", "AimbotPart", { "Head", "UpperTorso", "HumanoidRootPart", "Blisko" }, nil, "W co celuje kamera")
-		UI:Toggle(p, "Tylko widoczni", "AimbotVisible", nil, "Pomija cele za ścianami")
-		UI:Toggle(p, "Lepki cel", "AimbotSticky", nil, "Trzyma wybrany cel, dopóki nie ucieknie")
+		UI:Toggle(p, "Aimbot", "Aimbot", function(on) if on then AB:Start() else AB:Stop() end end)
+		UI:Dropdown(p, "Tryb", "AimbotMode", { "Hold", "Zawsze" })
+		UI:Dropdown(p, "Styl", "AimbotStyle", { "Wykładniczy", "Liniowy", "Snap" })
+		UI:Slider(p, "Płynność", "AimbotSmooth", 0.01, 1, 0.01, "")
+		UI:Slider(p, "Humanizacja", "AimbotHumanize", 0, 2, 0.05, "")
+		UI:Slider(p, "Predykcja", "AimbotPredict", 0, 0.6, 0.01, " s")
+		UI:Slider(p, "FOV", "AimbotFOV", 10, 400, 5, " px")
+		UI:Slider(p, "Zasięg", "AimbotRange", 50, 3000, 25, " st")
+		UI:Dropdown(p, "Punkt celowania", "AimbotPart", { "Head", "UpperTorso", "HumanoidRootPart", "Blisko" })
+		UI:Toggle(p, "Tylko widoczni", "AimbotVisible")
+		UI:Toggle(p, "Lepki cel", "AimbotSticky")
 
 		UI:Section(p, "Trigger Bot")
-		UI:Toggle(p, "Trigger Bot", "TriggerBot", function(on) if on then TG:Start() else TG:Stop() end end, "Strzela sam, gdy cel jest widoczny")
-		UI:Slider(p, "Opóźnienie", "TriggerDelay", 0.01, 0.5, 0.01, " s", nil, "Odstęp między strzałami")
+		UI:Toggle(p, "Trigger Bot", "TriggerBot", function(on) if on then TG:Start() else TG:Stop() end end)
+		UI:Slider(p, "Opóźnienie", "TriggerDelay", 0.01, 0.5, 0.01, " s")
 	end)
 
 	tab("Visuals", "✦", function(p)
 		UI:Section(p, "ESP")
-		UI:Toggle(p, "ESP", "ESP", function(on) if on then ESP:Start() else ESP:Stop() end end, "Główny przełącznik nakładek")
-		UI:Dropdown(p, "Styl boxa", "ESPBoxStyle", { "Pełny", "Narożniki", "Wypełniony" }, nil, "Kształt ramki")
-		UI:Toggle(p, "Box", "ESPBox", nil, "Ramka wokół gracza")
-		UI:Toggle(p, "Szkielet", "ESPSkeleton", nil, "Linie kości")
-		UI:Toggle(p, "Nazwa", "ESPName", nil, "Pseudonim nad graczem")
-		UI:Toggle(p, "Dystans", "ESPDistance", nil, "Odległość w metrach")
-		UI:Toggle(p, "Pasek HP", "ESPHealth", nil, "Pionowy pasek zdrowia")
-		UI:Toggle(p, "Liczba HP", "ESPHealthText", nil, "Wartość zdrowia liczbowo")
-		UI:Toggle(p, "Kolor od HP", "ESPHealthColor", nil, "Nazwa zmienia kolor wraz ze zdrowiem")
-		UI:Toggle(p, "Kropka na głowie", "ESPHeadDot", nil, "Znacznik głowy")
-		UI:Toggle(p, "Tracer", "ESPTracer", nil, "Linia od dołu ekranu")
-		UI:Toggle(p, "Strzałki poza ekranem", "ESPArrows", nil, "Wskaźnik dla celów poza kadrem")
-		UI:Toggle(p, "Chams", "ESPChams", nil, "Podświetlenie sylwetki")
-		UI:Toggle(p, "Tęcza", "ESPRainbow", nil, "Cykl kolorów")
-		UI:Slider(p, "Krycie", "ESPAlpha", 0.2, 1, 0.05, "", nil, "Przezroczystość nakładek")
-		UI:Slider(p, "Skala tekstu", "ESPTextScale", 0.6, 1.8, 0.1, "x", nil, "Rozmiar napisów")
-		UI:Slider(p, "Maks. dystans", "ESPMaxDist", 100, 5000, 50, " st", nil, "Powyżej tego dystansu ESP milczy")
-		UI:Toggle(p, "Team Check", "ESPTeamCheck", nil, "Pomija drużynę")
+		UI:Toggle(p, "ESP", "ESP", function(on) if on then ESP:Start() else ESP:Stop() end end)
+		UI:Dropdown(p, "Styl boxa", "ESPBoxStyle", { "Pełny", "Narożniki", "Wypełniony" })
+		UI:Toggle(p, "Box", "ESPBox")
+		UI:Toggle(p, "Szkielet", "ESPSkeleton")
+		UI:Toggle(p, "Nazwa", "ESPName")
+		UI:Toggle(p, "Dystans", "ESPDistance")
+		UI:Toggle(p, "Pasek HP", "ESPHealth")
+		UI:Toggle(p, "Liczba HP", "ESPHealthText")
+		UI:Toggle(p, "Kropka na głowie", "ESPHeadDot")
+		UI:Toggle(p, "Tracer", "ESPTracer")
+		UI:Toggle(p, "Strzałki poza ekranem", "ESPArrows")
+		UI:Toggle(p, "Chams", "ESPChams")
+		UI:Toggle(p, "Tęcza", "ESPRainbow")
+		UI:Slider(p, "Krycie", "ESPAlpha", 0.2, 1, 0.05, "")
+		UI:Slider(p, "Skala tekstu", "ESPTextScale", 0.6, 1.8, 0.1, "x")
+		UI:Slider(p, "Maks. dystans", "ESPMaxDist", 100, 5000, 50, " st")
+		UI:Toggle(p, "Team Check", "ESPTeamCheck")
 		UI:Section(p, "Kolory")
 		UI:Color(p, "Wróg", "ColorEnemy")
 		UI:Color(p, "Sojusznik", "ColorTeam")
@@ -2386,20 +2211,20 @@ local function build()
 
 	tab("World", "◈", function(p)
 		UI:Section(p, "Wallhack")
-		UI:Toggle(p, "Wallhack", "Wallhack", function(on) if on then World:Start() else World:Stop() end end, "Podświetla obiekty przez ściany")
+		UI:Toggle(p, "Wallhack", "Wallhack", function(on) if on then World:Start() else World:Stop() end end)
 		UI:Toggle(p, "Gracze", "WHPlayers")
 		UI:Toggle(p, "Boty / NPC", "WHBots")
 		UI:Toggle(p, "Obiekty", "WHObjects")
-		UI:Dropdown(p, "Widoczność", "WHDepth", { "Zawsze", "Zasłonięte" }, nil, "Zawsze = także przez ściany")
+		UI:Dropdown(p, "Widoczność", "WHDepth", { "Zawsze", "Zasłonięte" })
 		UI:Slider(p, "Wypełnienie", "WHFill", 0, 1, 0.05, "")
 		UI:Slider(p, "Obrys", "WHOutline", 0, 1, 0.05, "")
 		UI:Color(p, "Kolor", "ColorWH")
 		UI:Section(p, "Światło")
-		UI:Toggle(p, "Fullbright", "Fullbright", function() World:Light() end, "Rozjaśnia mapę")
-		UI:Toggle(p, "Bez mgły", "NoFog", function() World:Light() end, "Usuwa mgłę")
-		UI:Slider(p, "Godzina", "ClockTime", 0, 24, 0.5, "h", function() World:Light() end, "Pora dnia")
+		UI:Toggle(p, "Fullbright", "Fullbright", function() World:Light() end)
+		UI:Toggle(p, "Bez mgły", "NoFog", function() World:Light() end)
+		UI:Slider(p, "Godzina", "ClockTime", 0, 24, 0.5, "h", function() World:Light() end)
 		UI:Section(p, "Kamera")
-		UI:Slider(p, "FOV kamery", "CamFOV", 40, 120, 1, "", function() World:FOV() end, "Pole widzenia")
+		UI:Slider(p, "FOV kamery", "CamFOV", 40, 120, 1, "", function() World:FOV() end)
 		UI:Section(p, "Crosshair")
 		UI:Toggle(p, "Własny crosshair", "Crosshair")
 		UI:Dropdown(p, "Styl", "CrosshairStyle", { "Krzyż", "X" })
@@ -2411,15 +2236,14 @@ local function build()
 		UI:Toggle(p, "Hitbox", "Hitbox", function(on)
 			HB:Refresh()
 			if on then Cfg.Set("HitboxPreview", true) end
-		end, "Powiększa części ciała lokalnie")
+		end)
 		UI:Slider(p, "Szerokość", "HitboxW", 0.5, 20, 0.5, "", function() HB:Refresh() end)
 		UI:Slider(p, "Wysokość", "HitboxH", 0.5, 20, 0.5, "", function() HB:Refresh() end)
 		UI:Slider(p, "Głębokość", "HitboxD", 0.5, 20, 0.5, "", function() HB:Refresh() end)
-		UI:Slider(p, "Mnożnik głowy", "HitboxHeadMul", 1, 4, 0.25, "x", function() HB:Refresh() end, "Dodatkowe powiększenie samej głowy")
-		UI:Toggle(p, "Podgląd", "HitboxPreview", nil, "Ramki na zmienionych częściach")
+		UI:Toggle(p, "Podgląd", "HitboxPreview")
 		UI:Section(p, "Części")
 		for _, n in ipairs({ "Head", "UpperTorso", "LowerTorso", "HumanoidRootPart", "LeftUpperArm", "RightUpperArm", "LeftUpperLeg", "RightUpperLeg" }) do
-			local row = UI:Card(p, 30, nil, n)
+			local row = UI:Card(p, 30)
 			U.New("TextLabel", {
 				Size = UDim2.new(1, -42, 1, 0), Position = UDim2.fromOffset(13, 0),
 				BackgroundTransparency = 1, Text = n, Font = Enum.Font.GothamMedium,
@@ -2460,10 +2284,9 @@ local function build()
 	tab("Fun", "☺", function(p)
 		UI:Section(p, "Zabawki")
 		UI:Toggle(p, "Tęcza wszędzie", "ESPRainbow")
-		UI:Toggle(p, "Wielkie głowy", "BigHead", function(on) Fun:BigHead(on) end, "Powiększa głowy wszystkich")
-		UI:Button(p, "Trzęsienie kamery", function() Fun:Shake() end, false, "Krótki wstrząs")
-		UI:Button(p, "Obrót kamery", function() Fun:SpinToggle() end, false, "Włącz / wyłącz wirowanie")
-		UI:Button(p, "Losowa zaczepka na czacie", function() Fun:Taunt() end, false, "Wysyła tekst na czat")
+		UI:Toggle(p, "Wielkie głowy", "BigHead", function(on) Fun:BigHead(on) end)
+		UI:Button(p, "Trzęsienie kamery", function() Fun:Shake() end)
+		UI:Button(p, "Losowa zaczepka na czacie", function() Fun:Taunt() end)
 		UI:Button(p, "Disco (światło)", function()
 			Fun:Disco(not Cfg.Get("Disco"))
 			UI:Toast("Disco", Cfg.Get("Disco") and "Włączone" or "Wyłączone")
@@ -2483,7 +2306,8 @@ local function build()
 		UI:Button(p, "Wczytaj konfigurację", function()
 			local d = Store.Load()
 			if not d then UI:Toast("Konfiguracja", "Brak zapisu", true) return end
-			Cfg.Apply(d)
+			for k, val in pairs(d) do if DEF[k] ~= nil and type(val) == type(DEF[k]) then data[k] = val end end
+			CS.Signal.Changed:Fire("__all__", nil)
 			HB:Refresh() World:Light() applyAccent()
 			UI:Toast("Konfiguracja", "Wczytano")
 		end)
@@ -2492,45 +2316,12 @@ local function build()
 			UI:Toast("Konfiguracja", "Przywrócono domyślne")
 		end, true)
 
-		UI:Section(p, "Profile")
-		for _, slot in ipairs({ "A", "B", "C" }) do
-			local row = UI:Card(p, 32, nil, "Profil " .. slot)
-			U.New("TextLabel", {
-				Size = UDim2.fromOffset(80, 32), Position = UDim2.fromOffset(13, 0),
-				BackgroundTransparency = 1, Text = "Profil " .. slot, Font = Enum.Font.GothamMedium,
-				TextSize = 12, TextColor3 = TH.Text, TextXAlignment = Enum.TextXAlignment.Left,
-			}, row)
-			local sb = U.New("TextButton", {
-				Size = UDim2.fromOffset(54, 22), Position = UDim2.new(1, -118, 0.5, -11),
-				BackgroundColor3 = TH.Hover, Text = "zapisz", Font = Enum.Font.GothamBold,
-				TextSize = 10, TextColor3 = TH.Acc, AutoButtonColor = false, BorderSizePixel = 0,
-			}, row)
-			U.Corner(sb, 6)
-			sb.MouseButton1Click:Connect(function()
-				Store.SaveTo(FILE .. ".prof" .. slot, data)
-				UI:Toast("Profil " .. slot, "Zapisano")
-			end)
-			local lb = U.New("TextButton", {
-				Size = UDim2.fromOffset(54, 22), Position = UDim2.new(1, -60, 0.5, -11),
-				BackgroundColor3 = TH.Hover, Text = "wczytaj", Font = Enum.Font.GothamBold,
-				TextSize = 10, TextColor3 = TH.Text, AutoButtonColor = false, BorderSizePixel = 0,
-			}, row)
-			U.Corner(lb, 6)
-			lb.MouseButton1Click:Connect(function()
-				local d = Store.LoadFrom(FILE .. ".prof" .. slot)
-				if not d then UI:Toast("Profil " .. slot, "Pusty", true) return end
-				Cfg.Apply(d)
-				HB:Refresh() World:Light() applyAccent()
-				UI:Toast("Profil " .. slot, "Wczytano")
-			end)
-		end
-
 		UI:Section(p, "Wygląd")
-		UI:Color(p, "Kolor akcentu", "ColorAccent", "Kolor całego motywu")
+		UI:Color(p, "Kolor akcentu", "ColorAccent")
 		UI:Slider(p, "Skala UI", "UIScale", 0.8, 1.25, 0.05, "x", function(v)
-			local s = UI.Main:FindFirstChildOfClass("UIScale")
-			if s then s.Scale = v end
-		end, "Wielkość interfejsu")
+			local sc = UI.Main:FindFirstChildOfClass("UIScale")
+			if sc then sc.Scale = v end
+		end)
 		UI:Toggle(p, "Watermark", "ShowWM")
 		UI:Toggle(p, "Powiadomienia", "ShowToast")
 		UI:Button(p, "Wyśrodkuj okno", function()
@@ -2548,23 +2339,19 @@ local function build()
 		U.Corner(box, 8)
 		UI:Button(p, "Wyeksportuj do pola", function()
 			local ok, enc = pcall(function() return Http:JSONEncode(data) end)
-			if ok then
-				box.Text = enc
-				Cfg.Set("ExportStr", enc)
-				if Clipboard then pcall(Clipboard, enc) UI:Toast("Eksport", "Skopiowano do schowka") end
-			end
+			if ok then box.Text = enc Cfg.Set("ExportStr", enc) end
 		end)
 		UI:Button(p, "Importuj z pola", function()
 			local ok, dec = pcall(function() return Http:JSONDecode(box.Text) end)
 			if not ok or type(dec) ~= "table" then UI:Toast("Import", "Nieprawidłowy string", true) return end
-			Cfg.Apply(dec)
+			for k, val in pairs(dec) do if DEF[k] ~= nil and type(val) == type(DEF[k]) then data[k] = val end end
+			CS.Signal.Changed:Fire("__all__", nil)
 			HB:Refresh() World:Light() applyAccent()
 			UI:Toast("Import", "Zaimportowano")
 		end)
 
 		UI:Section(p, "Wydajność")
-		UI:Toggle(p, "Tryb wydajności (40 Hz)", "PerfMode", nil, "Stałe ograniczenie odświeżania ESP")
-		UI:Toggle(p, "Auto wydajność", "AutoPerf", nil, "Sam zwalnia przy spadku FPS")
+		UI:Toggle(p, "Tryb wydajności (40 Hz)", "PerfMode")
 		UI:Section(p, "Klawisze")
 		UI:Keybind(p, "Otwórz / zamknij GUI", "UIKey")
 		UI:Keybind(p, "Silent Aim (hold)", "AimKey")
@@ -2582,24 +2369,24 @@ local function build()
 		task.spawn(function()
 			while CS.Alive do
 				for _, ch in ipairs(pl:GetChildren()) do if ch:IsA("TextButton") then ch:Destroy() end end
-				for _, p2 in ipairs(Players:GetPlayers()) do
-					if p2 ~= LP then
-						local fr = T.Friend(p2)
+				for _, pl2 in ipairs(Players:GetPlayers()) do
+					if pl2 ~= LP then
+						local fr = T.Friend(pl2)
 						local b = U.New("TextButton", {
 							Size = UDim2.new(1, 0, 0, 28), BackgroundColor3 = fr and TH.AccD or TH.Card,
-							Text = "  " .. (fr and "★  " or "☆  ") .. p2.Name,
+							Text = "  " .. (fr and "★  " or "☆  ") .. pl2.Name,
 							Font = Enum.Font.Gotham, TextSize = 11, TextColor3 = fr and TH.Acc or TH.Dim,
 							TextXAlignment = Enum.TextXAlignment.Left, AutoButtonColor = false, BorderSizePixel = 0,
 						}, pl)
 						U.Corner(b, 7)
 						b.MouseButton1Click:Connect(function()
 							local list = table.clone(Cfg.Get("Friends"))
-							local i = table.find(list, p2.UserId)
-							if i then table.remove(list, i) else table.insert(list, p2.UserId) end
+							local i = table.find(list, pl2.UserId)
+							if i then table.remove(list, i) else table.insert(list, pl2.UserId) end
 							Cfg.Set("Friends", list)
 							b.BackgroundColor3 = i and TH.Card or TH.AccD
 							b.TextColor3 = i and TH.Dim or TH.Acc
-							b.Text = "  " .. (i and "☆  " or "★  ") .. p2.Name
+							b.Text = "  " .. (i and "☆  " or "★  ") .. pl2.Name
 						end)
 					end
 				end
@@ -2608,37 +2395,13 @@ local function build()
 		end)
 	end)
 
-	tab("Diag", "◎", function(p)
-		UI:Section(p, "Stan środowiska")
-		UI:Label(p, "Sprawdza, co executor realnie potrafi. Czerwone pola to brak funkcji.", true)
-		local holder = U.New("Frame", { Size = UDim2.new(1, 0, 0, 0), BackgroundTransparency = 1 }, p)
-		local hl = Instance.new("UIListLayout")
-		hl.Padding = UDim.new(0, 4)
-		hl.Parent = holder
-		hl:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-			holder.Size = UDim2.new(1, 0, 0, hl.AbsoluteContentSize.Y)
-		end)
-		Diag.Holder = holder
-		UI:Button(p, "Uruchom test", function() Diag:Run() end)
-		UI:Button(p, "Kopiuj log", function()
-			local txt = table.concat(CS.Log, "\n")
-			if Clipboard then pcall(Clipboard, txt) UI:Toast("Log", "Skopiowano") end
-		end)
-		UI:Button(p, "Odśwież GUI", function()
-			if UI.Gui then UI.Gui:Destroy() end
-			UI.Tabs = {} UI.Ref = {} UI.Search = {}
-			build()
-		end)
-		task.delay(0.3, function() pcall(Diag.Run, Diag) end)
-	end)
-
 	tab("Info", "ℹ", function(p)
 		UI:Section(p, "CHEŁMSKI SIEKATOR V" .. CS.Version)
 		UI:Label(p, "Ugotowane przez Pstryczka", true)
 		UI:Label(p, "Silent Aim przechwytuje Mouse.Hit, Mouse.UnitRay, Mouse.Target i Camera.CFrame.")
 		UI:Label(p, "Brak hooków? Aimbot nadal pracuje na kamerze.")
 		UI:Label(p, "ESP używa Drawing, a bez niego renderera Frame — działa wszędzie.")
-		UI:Label(p, "Okno przeciągasz za nagłówek, rozciągasz za róg, dwuklik nagłówka centruje.")
+		UI:Label(p, "Okno przeciągasz za nagłówek, rozciągasz za prawy dolny róg, dwuklik nagłówka centruje.")
 		UI:Section(p, "Skróty domyślne")
 		UI:Label(p, "RightShift — GUI · E — silent aim · X — aimbot · Delete — wyładuj", true)
 		UI:Button(p, "Wyładuj skrypt", function() CS:Destroy() end, true)
@@ -2650,7 +2413,7 @@ local function build()
 end
 
 --==========================================================
--- 23. CYKL
+-- 22. CYKL
 --==========================================================
 function CS:Destroy()
 	if self.Destroyed then return end
@@ -2668,13 +2431,9 @@ function CS:Destroy()
 	pcall(function() TG:Stop() end)
 	pcall(function() Chams:Clear() end)
 	pcall(function() Fun:Disco(false) end)
-	pcall(function() Fun.Spin = false end)
 	pcall(function()
-		for p, o in pairs(HB.Orig) do
-			if p and p.Parent then
-				p.Size = o.Size
-				p.CanCollide = o.Collide
-			end
+		for p, s in pairs(HB.Orig) do
+			if p and p.Parent then p.Size = s end
 		end
 	end)
 	pcall(Draw.Purge)
@@ -2686,8 +2445,6 @@ function CS:Start()
 	if not LP then error("brak LocalPlayer") end
 	if not Camera then error("brak CurrentCamera") end
 
-	CS:Note("start v" .. CS.Version)
-
 	Draw.Init()
 	OV:Init()
 	HB:Init()
@@ -2698,11 +2455,7 @@ function CS:Start()
 	if Cfg.Get("TriggerBot") then TG:Start() end
 	if Cfg.Get("Fullbright") or Cfg.Get("NoFog") then World:Light() end
 
-	local okb, errb = pcall(build)
-	if not okb then
-		CS:Note("build: " .. tostring(errb))
-		warn("[SIEKATOR] build: " .. tostring(errb))
-	end
+	build()
 	CS.Ready = true
 
 	CS.Signal.Changed:Connect(function(k)
@@ -2770,7 +2523,7 @@ function CS:Start()
 end
 
 --==========================================================
--- 24. START
+-- 23. START
 --==========================================================
 getgenv().CHELMSKI = CS
 
